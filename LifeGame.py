@@ -1,10 +1,11 @@
 import pygame
+import pygame.freetype
 import numpy as np
 
-# Inicializar Pygame
+# Inicializa Pygame
 pygame.init()
 
-# Configuración de la ventana
+# Configura la ventana
 width, height = 1500, 900
 screen = pygame.display.set_mode((width, height))
 pygame.display.set_caption("Juego de la Vida")
@@ -35,45 +36,60 @@ BLACK = (0, 0, 0)
 WHITE = (255, 255, 255)
 GRAY = (169, 169, 169)  # Gris para el contador de generación
 
-# Fuente para el contador de generación
-font = pygame.font.Font(None, 36)
+# Carga una fuente TrueType (TTF)
+font = pygame.font.Font("Life-Game-Conway\Font3.ttf", 15)
 
 # Define varios patrones predefinidos como listas de coordenadas (row, col)
 patterns = [
-    [(0, 1), (1, 2), (2, 0), (2, 1), (2, 2)],  # Nave espacial
+    [(0, 1), (1, 2), (2, 0), (2, 1), (2, 2)],  # Nave 1
     [(0, 0), (0, 1), (0, 2)],  # Línea
-    [(0, 1), (0, 3), (1, 0), (1, 4), (2, 1), (2, 2), (2, 3), (2, 4), (3, 1), (4, 2)], # Pulsar
-    [(0, 1), (1, 0), (1, 1), (1, 2), (2, 0)],  # Nave de Células Cruzadas
+    [(0, 1), (0, 3), (1, 0), (1, 4), (2, 1), (2, 2), (2, 3), (2, 4), (3, 1), (4, 2)], # Forma 1
+    [(0, 1), (1, 0), (1, 1), (1, 2), (2, 0)],  # Forma 2
     [(0, 0), (0, 1), (0, 4), (0, 5),
      (1, 1), (1, 5),
      (2, 0), (2, 2), (2, 3), (2, 5),
      (3, 0), (3, 3), (3, 5),
      (4, 0), (4, 5),
-     (5, 0), (5, 1), (5, 4), (5, 5)],  # Compuerta Lógica OR
+     (5, 0), (5, 1), (5, 4), (5, 5)],  # Forma 3
     [(0, 2), (0, 3), (0, 4), (0, 5),
      (1, 1), (1, 2), (1, 4), (1, 5),
      (2, 1), (2, 5),
      (3, 0), (3, 3), (3, 5),
      (4, 1), (4, 4),
-     (5, 2), (5, 3)],  # Compuerta Lógica AND
+     (5, 2), (5, 3)],  # Forma 4
     [(0, 1), (0, 4),
      (1, 2), (1, 3),
      (2, 0), (2, 5),
      (3, 2), (3, 3),
      (4, 1), (4, 4),
-     (5, 1), (5, 4)],  # Compuerta Lógica XOR
-]
+     (5, 1), (5, 4)],  # Forma 5
+    [(0, 1), (1, 2), (2, 0), (2, 1), (2, 2), (2, 3), (2, 0), (2, 5), (2, 6), (2, 7), (2, 8), (3, 8)], #Forma 6
+   [(1, 2), (1, 3), (1, 4), (1, 8), (1, 9), (1, 10),
+    (5, 0), (5, 5), (5, 7), (5, 12),
+    (6, 0), (6, 5), (6, 7), (6, 12),
+    (7, 2), (7, 3), (7, 4), (7, 8), (7, 9), (7, 10),
+    (13, 2), (13, 3), (13, 4), (13, 8), (13, 9), (13, 10),
+    (14, 0), (14, 5), (14, 7), (14, 12),
+    (15, 0), (15, 5), (15, 7), (15, 12),
+    (16, 0), (16, 5), (16, 7), (16, 12),
+    (18, 2), (18, 3), (18, 4), (18, 8), (18, 9), (18, 10)], #Forma 7]
+            ]
 
 # Nombres de los patrones
 pattern_names = [
-    "Nave espacial",
+    "Nave 1",
     "Línea",
-    "Pulsar",
-    "Nave de Células Cruzadas",
-    "Compuerta Lógica OR",
-    "Compuerta Lógica AND",
-    "Compuerta Lógica XOR",
-]
+    "Forma 1",
+    "Forma 2",
+    "Forma 3",
+    "Forma 4",
+    "Forma 5",
+    "Forma 6",
+    "Forma 7",
+    "Forma 8",
+    "Forma 9",
+    "Forma 10",
+            ]             
 
 # Función para configurar la cuadrícula con un patrón seleccionado
 def set_pattern(pattern):
@@ -83,36 +99,44 @@ def set_pattern(pattern):
         if 0 <= grid_row < grid_rows and 0 <= grid_col < grid_cols:
             grid[grid_row][grid_col] = 1
 
-# Índice del patrón seleccionado actualmente
-selected_pattern_index = 0
-
-# Función para configurar la cuadrícula con un patrón seleccionado
-def set_pattern(pattern):
-    for row, col in pattern:
-        grid_row = grid_rows // 2 + row
-        grid_col = grid_cols // 2 + col
-        if 0 <= grid_row < grid_rows and 0 <= grid_col < grid_cols:
-            grid[grid_row][grid_col] = 1
-
 # Función para dibujar botones en la barra de menú
 def draw_menu():
     menu_height = game_height
     button_height = 50
     button_width = 150
     button_spacing = 10
-    x = game_width + 10  # Posición horizontal para los botones
+    total_button_height = len(patterns) * (button_height + button_spacing)
+    x = game_width + (menu_width - button_width) // 2  # Centra horizontalmente los botones
     y = 10
-    
+
     for i, pattern in enumerate(patterns):
-        pygame.draw.rect(screen, WHITE, (x, y, button_width, button_height))
-        text = font.render(pattern_names[i], True, BLACK)  # Mostrar el nombre del patrón
-        screen.blit(text, (x + 10, y + 10))
+        button_rect = pygame.Rect(x, y, button_width, button_height)
+
+        if button_rect.collidepoint(pygame.mouse.get_pos()):
+            pygame.draw.rect(screen, (60, 60, 60), button_rect)  # Cambia el color de fondo a gris oscuro
+        else:
+            pygame.draw.rect(screen, (120, 120, 120), button_rect)
+
+        text = font.render(pattern_names[i], True, WHITE)
+        text_rect = text.get_rect(center=button_rect.center)
+        screen.blit(text, text_rect)
         y += button_height + button_spacing
-        
-        # Detecta clic en el botón
-        if x <= pygame.mouse.get_pos()[0] <= x + button_width and y - button_height <= pygame.mouse.get_pos()[1] <= y:
-            if pygame.mouse.get_pressed()[0]:
-                set_pattern(pattern)
+
+        if button_rect.collidepoint(pygame.mouse.get_pos()) and pygame.mouse.get_pressed()[0]:
+            set_pattern(pattern)
+            
+# Función para dibujar el contador de generación
+def draw_generation_counter():
+    text = font.render("Generación: " + str(generation), True, GRAY)
+    text_rect = text.get_rect(center=(game_width + menu_width // 2, game_height - 40))
+    screen.blit(text, text_rect)
+            
+# Función para dibujar el contador de generación
+def draw_generation_counter():
+    text = font.render("Generación: " + str(generation), True, GRAY)
+    text_rect = text.get_rect(center=(game_width + menu_width // 2, game_height - 40))  # Centra horizontalmente el contador
+    screen.blit(text, text_rect)
+
 
 # Función para dibujar el contador de generación
 def draw_generation_counter():
@@ -177,6 +201,7 @@ while running:
                 step_by_step = not step_by_step  # Alternar el modo de avance generación por generación
             elif event.key == pygame.K_v:
                 auto_advance = not auto_advance  # Alternar avance automático con la tecla 'V'
+            
 
     if auto_advance and current_time - last_advance_time >= auto_advance_interval:
         grid = next_generation()
@@ -189,7 +214,7 @@ while running:
     draw_grid()
     draw_menu()  # Dibujar la barra de menú
     draw_generation_counter()  # Dibujar el contador de generación
-    
+
     pygame.display.flip()
 
 # Salir del juego
